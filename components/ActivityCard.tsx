@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Activity, Provider, Comment, User, Location } from '../types';
 import { AwardIcon, BookmarkIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, CreditCardIcon, HeartIcon, MapPinIcon, MessageSquareIcon, ShareIcon, StarIcon, TagIcon, UsersIcon, MoreVerticalIcon, NavigationIcon, RefreshCwIcon, MessageCircleIcon } from './icons';
-import { ALL_INTERESTS_MAP } from '../../interests';
+import { ALL_INTERESTS_MAP } from '../interests';
 import CommentSection from './CommentSection';
 import BookingForm, { BookingDetails } from './BookingForm';
 import ShareModal from './ShareModal';
-import { mockFriends } from '../../constants';
+import { mockFriends } from '../constants';
 import OptionsMenu from './OptionsMenu';
 import ReportModal, { ReportDetails } from './ReportModal';
 import DirectionsChooserModal from './DirectionsChooserModal';
