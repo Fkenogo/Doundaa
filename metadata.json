@@ -1,0 +1,7 @@
+{
+  "name": "Doundaa",
+  "description": "Doundaa: An activity discovery and matchmaking platform where plans fall into place and people show up.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
