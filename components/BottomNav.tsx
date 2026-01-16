@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { CompassIcon, HeartIcon, PlusCircleIcon, UserIcon, UsersIcon, MessageCircleIcon } from './icons';
+import { CompassIcon, HeartIcon, PlusCircleIcon, UsersIcon, MessageCircleIcon } from './icons';
 import { Page } from '../types';
 
 interface NavItemProps {
@@ -46,12 +47,17 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage, navigate, hasUnreadMe
         <nav className="flex items-center justify-around h-16">
           <NavItem icon={<CompassIcon className="w-6 h-6" />} label="Discover" page="discover" activePage={activePage} navigate={navigate} />
           <NavItem icon={<UsersIcon className="w-6 h-6" />} label="Matches" page="matches" activePage={activePage} navigate={navigate} />
-          <NavItem icon={<MessageCircleIcon className="w-6 h-6" />} label="Messages" page="messages" activePage={activePage} navigate={navigate} hasNotification={hasUnreadMessages} />
-          <button onClick={handleCreatePostClick} className="text-teal-600 hover:text-teal-700 transform hover:scale-110 transition-transform -mt-6 bg-white rounded-full p-2 shadow-lg border">
-            <PlusCircleIcon className="w-10 h-10" />
+          
+          <button 
+            onClick={handleCreatePostClick} 
+            className="text-teal-600 hover:text-teal-700 bg-white rounded-full p-1 shadow-lg border-2 border-teal-50 animate-float transition-all active:scale-90"
+            aria-label="Create Post"
+          >
+            <PlusCircleIcon className="w-12 h-12" />
           </button>
+
+          <NavItem icon={<MessageCircleIcon className="w-6 h-6" />} label="Messages" page="messages" activePage={activePage} navigate={navigate} hasNotification={hasUnreadMessages} />
           <NavItem icon={<HeartIcon className="w-6 h-6" />} label="Interests" page="interests" activePage={activePage} navigate={navigate} />
-          <NavItem icon={<UserIcon className="w-6 h-6" />} label="Profile" page="profile" activePage={activePage} navigate={navigate} />
         </nav>
       </div>
     </footer>

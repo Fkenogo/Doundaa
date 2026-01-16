@@ -1,11 +1,13 @@
+
 import React, { useState, useMemo } from 'react';
-import { User, Activity } from '../../types';
+import { User, Activity, Page, Provider } from '../../types';
 import { mockActivitiesForYou, mockUsersInterestedInActivity } from '../../constants';
 import { MessageCircleIcon } from '../icons';
 import { formMatchGroups, MatchGroup } from '../matchingAlgorithm';
 
 interface MatchesPageProps {
   currentUser: User | null;
+  onNavigate: (page: Page, profileUser?: User | Provider) => void;
 }
 
 const MatchScoreIndicator: React.FC<{ score: number }> = ({ score }) => {
@@ -48,7 +50,7 @@ const MatchScoreIndicator: React.FC<{ score: number }> = ({ score }) => {
     );
 };
 
-const MatchGroupCard: React.FC<{ group: MatchGroup }> = ({ group }) => {
+const MatchGroupCard: React.FC<{ group: MatchGroup, onNavigate: (page: Page, profileUser?: User | Provider) => void }> = ({ group, onNavigate }) => {
     const [chatRequested, setChatRequested] = useState(false);
     const visibleMembers = group.members.slice(0, 5);
 
@@ -58,18 +60,31 @@ const MatchGroupCard: React.FC<{ group: MatchGroup }> = ({ group }) => {
                 <div>
                     <div className="flex -space-x-3">
                         {visibleMembers.map(member => (
-                            <img 
+                            <button 
                                 key={member.id} 
-                                src={member.avatarUrl} 
-                                alt={member.name}
-                                className="w-10 h-10 rounded-full border-2 border-white"
-                            />
+                                onClick={() => onNavigate('profile', member)}
+                                className="w-10 h-10 rounded-full border-2 border-white overflow-hidden active:scale-90 transition-transform"
+                            >
+                                <img 
+                                    src={member.avatarUrl} 
+                                    alt={member.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </button>
                         ))}
                     </div>
-                    <p className="text-sm font-semibold text-gray-800 mt-2">
-                        {group.members.map(m => m.name).join(', ')}
-                    </p>
-                    <p className="text-xs text-gray-500">{group.size}-person crew</p>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                        {group.members.map((m, idx) => (
+                            <button 
+                                key={m.id} 
+                                onClick={() => onNavigate('profile', m)}
+                                className="text-sm font-semibold text-gray-800 hover:text-teal-600 transition-colors"
+                            >
+                                {m.name}{idx < group.members.length - 1 ? ',' : ''}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{group.size}-person crew</p>
                 </div>
                 <div className="text-center">
                     <MatchScoreIndicator score={group.avgCompatibility} />
@@ -88,7 +103,7 @@ const MatchGroupCard: React.FC<{ group: MatchGroup }> = ({ group }) => {
     )
 }
 
-const MatchesPage: React.FC<MatchesPageProps> = ({ currentUser }) => {
+const MatchesPage: React.FC<MatchesPageProps> = ({ currentUser, onNavigate }) => {
   const [selectedActivity] = useState<Activity>(mockActivitiesForYou[0]);
 
   const matchGroups = useMemo(() => {
@@ -120,7 +135,7 @@ const MatchesPage: React.FC<MatchesPageProps> = ({ currentUser }) => {
         <div className="space-y-4">
             <h3 className="font-bold text-gray-700 px-2">Your Suggested Doundaa Crews</h3>
             {currentUserGroups.map((group, index) => (
-                <MatchGroupCard key={index} group={group} />
+                <MatchGroupCard key={index} group={group} onNavigate={onNavigate} />
             ))}
         </div>
       ) : (

@@ -1,7 +1,8 @@
 {
   "name": "Doundaa",
-  "description": "Doundaa: An activity discovery and matchmaking platform where plans fall into place and people show up.",
+  "description": "Doundaa: Activity discovery & matchmaking platform. Find your crew and show up.",
   "requestFramePermissions": [
+    "camera",
     "geolocation"
   ]
 }

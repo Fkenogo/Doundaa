@@ -1,3 +1,4 @@
+
 import { User, Activity } from '../types';
 import { ALL_INTERESTS_MAP } from '../interests';
 import { ADJACENT_INTERESTS } from '../interestClusters';
@@ -59,9 +60,9 @@ export const findSimilarUsers = (currentUser: User, allUsers: User[]): SimilarUs
 // RECOMMENDATION ENGINE
 // ============================================
 
-// FIX: Add 'allActivities' parameter to provide necessary data and remove dependency on a hardcoded constant.
+// FIX: Explicitly type Sets as string to avoid unknown type issues.
 export const generateInterestRecommendations = (currentUser: User, allUsers: User[], allActivities: Activity[]): RecommendedInterest[] => {
-    const userInterests = new Set(currentUser.interestIds || []);
+    const userInterests = new Set<string>(currentUser.interestIds || []);
     const recommendationScores: { [key: string]: { score: number, reasons: Set<string> } } = {};
 
     const addScore = (id: string, value: number, reason: string) => {
@@ -119,8 +120,9 @@ export const generateInterestRecommendations = (currentUser: User, allUsers: Use
 };
 
 
+// FIX: Ensure firstMatch is explicitly typed as string for Map lookups.
 export const generateActivityRecommendations = (currentUser: User, allActivities: Activity[], allUsers: User[]): RecommendedActivity[] => {
-    const userInterests = new Set(currentUser.interestIds || []);
+    const userInterests = new Set<string>(currentUser.interestIds || []);
     const seenActivities = new Set(currentUser.viewedActivities || []);
     const unseenActivities = allActivities.filter(a => !seenActivities.has(a.id));
     
@@ -133,10 +135,11 @@ export const generateActivityRecommendations = (currentUser: User, allActivities
 
         // Interest match
         const activityInterests = new Set(activity.interestIds);
-        const matches = new Set([...userInterests].filter(i => activityInterests.has(i)));
+        const matches = new Set<string>([...userInterests].filter(i => activityInterests.has(i)));
         if (matches.size > 0) {
             score += matches.size * 20;
-            reason = `Matches your interest in ${ALL_INTERESTS_MAP.get([...matches][0])?.name}`;
+            const firstMatch: string = [...matches][0];
+            reason = `Matches your interest in ${ALL_INTERESTS_MAP.get(firstMatch)?.name}`;
         }
         
         // Quality score

@@ -1,182 +1,179 @@
+
 import React, { useState, useEffect } from 'react';
-import DiscoveryPage from './components/pages/DiscoveryPage';
-import BottomNav from './components/BottomNav';
 import Header from './components/Header';
-import CreatePostPage from './components/pages/CreatePostPage';
+import BottomNav from './components/BottomNav';
+import DiscoveryPage from './components/pages/DiscoveryPage';
+import MatchesPage from './components/pages/MatchesPage';
 import ChatPage from './components/pages/ChatPage';
+import InterestsPage from './components/pages/InterestsPage';
+import ProfilePage from './components/pages/ProfilePage';
+import CreatePostPage from './components/pages/CreatePostPage';
+import WelcomePage from './components/pages/WelcomePage';
 import AuthPage from './components/pages/AuthPage';
 import OnboardingPage, { OnboardingData } from './components/pages/OnboardingPage';
-import ProfilePage from './components/pages/ProfilePage';
 import AdminPage from './components/pages/AdminPage';
-import WelcomePage from './components/pages/WelcomePage';
-import MatchesPage from './components/pages/MatchesPage';
-import InterestsPage from './components/pages/InterestsPage';
-import { Page, Conversation, Provider, Message, User } from './types';
-import { mockConversations, currentUser as initialUser } from './constants';
+import { Page, User, Conversation, Message, Provider } from './types';
+import { currentUser as mockUser, mockConversations } from './constants';
 
 const App: React.FC = () => {
+  // --- AUTH & ONBOARDING STATE ---
+  const [showWelcome, setShowWelcome] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  // Add a new state to track if the welcome screen has been seen.
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>(hasSeenWelcome ? 'auth' : 'welcome');
-  const [pageState, setPageState] = useState<object | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  // --- NAVIGATION STATE ---
+  const [currentPage, setCurrentPage] = useState<Page>('discover');
+  const [activeConversationId, setActiveConversationId] = useState<string | undefined>(undefined);
+  const [viewingProfileUser, setViewingProfileUser] = useState<User | Provider | null>(null);
+
+  // --- CHAT STATE ---
   const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
-  useEffect(() => {
-    const totalUnread = conversations.reduce((acc, curr) => acc + curr.unreadCount, 0);
-    setHasUnreadMessages(totalUnread > 0);
-  }, [conversations]);
+  const hasUnreadMessages = conversations.some(c => c.unreadCount > 0);
 
-  const navigate = (page: Page, state?: object) => {
-    setCurrentPage(page);
-    setPageState(state || null);
-  };
-  
-  const handleWelcomeComplete = () => {
-    setHasSeenWelcome(true);
-    navigate('auth');
-  };
-
-  const handleLoginSuccess = () => {
-    setIsAuthenticated(true);
-    // Simulate fetching user data but without interests initially
-    const userWithoutInterests = { ...initialUser, interestIds: [] };
-    setCurrentUser(initialUser); // Use full user for matching demo
-    
-    // In a real app, you'd check a flag from your backend
-    if (!hasCompletedOnboarding) {
-        navigate('onboarding');
-    } else {
-        navigate('discover');
-    }
-  };
-
+  // --- HANDLERS ---
   const handleOnboardingComplete = (data: OnboardingData) => {
-    setCurrentUser(prev => prev ? { 
-        ...prev, 
-        name: data.profile.name,
-        username: data.profile.username,
-        avatarUrl: data.profile.avatarUrl,
-        bio: data.profile.bio,
-        interestIds: data.interests,
-        discoveryMode: data.discoveryMode,
-    } : null);
+    const newUser: User = {
+      id: 'u_new',
+      name: data.profile.name,
+      username: data.profile.username,
+      avatarUrl: data.profile.avatarUrl || 'https://picsum.photos/seed/default/100/100',
+      bio: data.profile.bio,
+      interestIds: data.interests,
+      discoveryMode: data.discoveryMode,
+      isVerified: false,
+      verificationLevel: 1,
+      activityHistory: { attended: [] },
+      viewedActivities: [],
+    };
+    setUser(newUser);
     setHasCompletedOnboarding(true);
-    navigate('discover');
-  };
-  
-  const updateUserInterests = (newInterestIds: string[]) => {
-      if (currentUser) {
-          setCurrentUser({
-              ...currentUser,
-              interestIds: Array.from(new Set([...currentUser.interestIds || [], ...newInterestIds]))
-          });
-      }
+    setCurrentPage('discover');
   };
 
-  const handleContinueAsGuest = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    setHasSeenWelcome(true); // So they don't see it again if they navigate back
-    navigate('discover');
-  };
-  
-  const requestAuth = () => {
-    navigate('auth');
+  const handleStartConversation = (provider: Provider | User) => {
+    const existing = conversations.find(c => c.participants.some(p => p.id === provider.id));
+    if (existing) {
+      setActiveConversationId(existing.id);
+    } else {
+      const newConv: Conversation = {
+        id: `conv_${Date.now()}`,
+        participants: [user || mockUser, provider],
+        messages: [],
+        unreadCount: 0
+      };
+      setConversations([newConv, ...conversations]);
+      setActiveConversationId(newConv.id);
+    }
+    setCurrentPage('messages');
   };
 
   const handleSendMessage = (conversationId: string, message: Message) => {
-    setConversations(prev =>
-      prev.map(c =>
-        c.id === conversationId ? { ...c, messages: [...c.messages, message] } : c
-      )
-    );
-  };
-  
-  const findOrCreateConversation = (provider: Provider): string => {
-    if (!currentUser) return '';
-    const existingConversation = conversations.find(c => c.participants.some(p => p.id === provider.id));
-    if (existingConversation) {
-      return existingConversation.id;
-    } else {
-      const newConversation: Conversation = {
-        id: `conv_${provider.id}`,
-        participants: [currentUser, provider as User],
-        messages: [],
-        unreadCount: 0,
-      };
-      setConversations(prev => [newConversation, ...prev]);
-      return newConversation.id;
-    }
+    setConversations(prev => prev.map(c => 
+      c.id === conversationId ? { ...c, messages: [...c.messages, message] } : c
+    ));
   };
 
-  const handleStartConversation = (provider: Provider) => {
-      const conversationId = findOrCreateConversation(provider);
-      if(conversationId) {
-        navigate('messages', { activeConversationId: conversationId });
-      }
-  };
-  
   const handleMarkAsRead = (conversationId: string) => {
-    setConversations(prev => 
-        prev.map(c => 
-            c.id === conversationId ? { ...c, unreadCount: 0 } : c
-        )
-    );
+    setConversations(prev => prev.map(c => 
+      c.id === conversationId ? { ...c, unreadCount: 0 } : c
+    ));
   };
 
-  const renderPage = () => {
-    const userInterests = currentUser?.interestIds || [];
+  const navigate = (page: Page, profileUser?: User | Provider) => {
+    if (page === 'profile') {
+        setViewingProfileUser(profileUser || null);
+    } else {
+        setViewingProfileUser(null);
+    }
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  };
+
+  // --- RENDER LOGIC ---
+
+  if (showWelcome) return <WelcomePage onGetStarted={() => setShowWelcome(false)} />;
+  if (!isAuthenticated) return <AuthPage onLoginSuccess={() => setIsAuthenticated(true)} onContinueAsGuest={() => setIsAuthenticated(true)} />;
+  if (!hasCompletedOnboarding) return <OnboardingPage initialUser={user} onOnboardingComplete={handleOnboardingComplete} />;
+
+  const renderContent = () => {
     switch (currentPage) {
-      case 'welcome':
-        return <WelcomePage onGetStarted={handleWelcomeComplete} />;
       case 'discover':
-        return <DiscoveryPage onNavigate={navigate} onStartConversation={handleStartConversation} isAuthenticated={isAuthenticated} onRequestAuth={requestAuth} userInterests={userInterests} currentUser={currentUser} />;
-      case 'matches':
-        return <MatchesPage currentUser={currentUser} />;
-      case 'interests':
-        return <InterestsPage currentUser={currentUser} onUpdateInterests={updateUserInterests} />;
-      case 'createPost':
-        return <CreatePostPage onPostCreated={() => navigate('discover')} />;
-      case 'messages':
         return (
-          <ChatPage
-            conversations={conversations}
-            onSendMessage={handleSendMessage}
-            onMarkAsRead={handleMarkAsRead}
-            initialConversationId={(pageState as any)?.activeConversationId}
+          <DiscoveryPage 
+            onNavigate={navigate} 
+            onStartConversation={handleStartConversation}
+            isAuthenticated={isAuthenticated}
+            onRequestAuth={() => setIsAuthenticated(false)}
+            userInterests={user?.interestIds || mockUser.interestIds || []}
+            currentUser={user || mockUser}
           />
         );
-      case 'auth':
-        return <AuthPage onLoginSuccess={handleLoginSuccess} onContinueAsGuest={handleContinueAsGuest} />;
-      case 'onboarding':
-        return <OnboardingPage onOnboardingComplete={handleOnboardingComplete} initialUser={currentUser} />;
+      case 'matches':
+        return <MatchesPage currentUser={user || mockUser} onNavigate={navigate} />;
+      case 'messages':
+        return (
+          <ChatPage 
+            conversations={conversations} 
+            onSendMessage={handleSendMessage} 
+            onMarkAsRead={handleMarkAsRead}
+            initialConversationId={activeConversationId}
+            onNavigate={navigate}
+          />
+        );
+      case 'interests':
+        return (
+          <InterestsPage 
+            currentUser={user || mockUser} 
+            onUpdateInterests={(ids) => setUser(prev => prev ? { ...prev, interestIds: ids } : null)}
+          />
+        );
       case 'profile':
-        return currentUser ? <ProfilePage user={currentUser} onNavigate={navigate}/> : <DiscoveryPage onNavigate={navigate} onStartConversation={handleStartConversation} isAuthenticated={isAuthenticated} onRequestAuth={requestAuth} userInterests={userInterests} currentUser={currentUser} />;
+        const targetUser = viewingProfileUser || user || mockUser;
+        const isOwn = !viewingProfileUser || viewingProfileUser.id === (user?.id || mockUser.id);
+        return (
+          <ProfilePage 
+            user={targetUser as User} 
+            isOwnProfile={isOwn}
+            onNavigate={navigate}
+            onUpdateProfile={(data) => setUser(prev => prev ? { ...prev, ...data } : null)}
+            onStartConversation={handleStartConversation}
+          />
+        );
+      case 'createPost':
+        return <CreatePostPage onPostCreated={() => navigate('discover')} />;
       case 'admin':
         return <AdminPage />;
       default:
-        return <DiscoveryPage onNavigate={navigate} onStartConversation={handleStartConversation} isAuthenticated={isAuthenticated} onRequestAuth={requestAuth} userInterests={userInterests} currentUser={currentUser} />;
+        return <DiscoveryPage onNavigate={navigate} onStartConversation={handleStartConversation} isAuthenticated={isAuthenticated} onRequestAuth={() => {}} userInterests={[]} currentUser={null} />;
     }
-  }
-  
-  const showNavAndHeader = currentPage !== 'auth' && currentPage !== 'onboarding' && currentPage !== 'welcome';
+  };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-       {showNavAndHeader && (
-         <>
-          <Header onLogoClick={() => navigate('discover')} onProfileClick={() => isAuthenticated ? navigate('profile') : requestAuth()} hasNotifications={hasUnreadMessages} avatarUrl={currentUser?.avatarUrl} />
-          <main className="pt-16 pb-20">
-            {renderPage()}
-          </main>
-          <BottomNav activePage={currentPage} navigate={navigate} hasUnreadMessages={hasUnreadMessages} isAuthenticated={isAuthenticated} onRequestAuth={requestAuth} />
-         </>
-       )}
-       {!showNavAndHeader && renderPage()}
+    <div className="max-w-md mx-auto h-[100dvh] flex flex-col bg-white shadow-2xl relative overflow-hidden">
+      {currentPage !== 'admin' && (
+        <Header 
+          onLogoClick={() => navigate('discover')} 
+          onProfileClick={() => navigate('profile')}
+          hasNotifications={hasUnreadMessages}
+          avatarUrl={user?.avatarUrl || mockUser.avatarUrl}
+        />
+      )}
+      
+      <main className={`flex-1 overflow-y-auto no-scrollbar ${currentPage !== 'admin' ? 'pt-16 pb-20' : ''}`}>
+        {renderContent()}
+      </main>
+
+      {currentPage !== 'admin' && (
+        <BottomNav 
+          activePage={currentPage} 
+          navigate={navigate} 
+          hasUnreadMessages={hasUnreadMessages}
+          isAuthenticated={isAuthenticated}
+          onRequestAuth={() => setIsAuthenticated(false)}
+        />
+      )}
     </div>
   );
 };

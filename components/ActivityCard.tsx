@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Provider, Comment, User, Location } from '../types';
-import { AwardIcon, BookmarkIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, CreditCardIcon, HeartIcon, MapPinIcon, MessageSquareIcon, ShareIcon, StarIcon, TagIcon, UsersIcon, MoreVerticalIcon, NavigationIcon, RefreshCwIcon, MessageCircleIcon } from './icons';
+import { Activity, Provider, Comment, User, Location, Page } from '../types';
+import { AwardIcon, BookmarkIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, CreditCardIcon, HeartIcon, MapPinIcon, MessageSquareIcon, ShareIcon, StarIcon, TagIcon, UsersIcon, MoreVerticalIcon, NavigationIcon, RefreshCwIcon, MessageCircleIcon, SparklesIcon } from './icons';
 import { ALL_INTERESTS_MAP } from '../interests';
 import CommentSection from './CommentSection';
 import BookingForm, { BookingDetails } from './BookingForm';
@@ -15,12 +16,19 @@ interface ActivityCardProps {
   activity: Activity;
   onFollowToggle: (providerId: string, isFollowing: boolean) => void;
   onStartConversation: (provider: Provider) => void;
+  onNavigate: (page: Page, profileUser?: User | Provider) => void;
   isAuthenticated: boolean;
   onRequestAuth: () => void;
   userInterests: string[];
 }
 
-const currentUser: User = { id: 'u4', name: 'CurrentUser', avatarUrl: 'https://picsum.photos/seed/current-user/50/50' };
+const currentUser: User = { 
+    id: 'u4', 
+    name: 'CurrentUser', 
+    avatarUrl: 'https://i.pravatar.cc/150?u=u4',
+    isVerified: false,
+    verificationLevel: 1
+};
 const CAPTION_MAX_LENGTH = 100;
 
 const VerificationBadge: React.FC<{ level: number }> = ({ level }) => {
@@ -28,7 +36,7 @@ const VerificationBadge: React.FC<{ level: number }> = ({ level }) => {
         return (
             <div className="relative group flex items-center">
                 <span className="text-xs font-semibold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">New</span>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30 shadow-xl">
                     New Provider
                 </div>
             </div>
@@ -49,7 +57,7 @@ const VerificationBadge: React.FC<{ level: number }> = ({ level }) => {
     return (
         <div className="relative group flex items-center">
             <AwardIcon className={`w-4 h-4 ${badge.color}`} />
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30">
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30 shadow-xl">
                 {badge.name}: {badge.description}
             </div>
         </div>
@@ -57,7 +65,7 @@ const VerificationBadge: React.FC<{ level: number }> = ({ level }) => {
 };
 
 
-const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, onStartConversation, isAuthenticated, onRequestAuth, userInterests }) => {
+const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, onStartConversation, onNavigate, isAuthenticated, onRequestAuth, userInterests }) => {
   const { title, description, provider, category, location, dateTime, price, interestedCount, matchCount, images, isTimeSensitive, groupSize, distance, isRecurring, interestIds } = activity;
   
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -69,6 +77,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isDirectionsModalOpen, setIsDirectionsModalOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false); 
   const [currentInterestedCount, setCurrentInterestedCount] = useState(interestedCount);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [countUpdateKey, setCountUpdateKey] = useState(0);
@@ -120,40 +129,48 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
     setCurrentImageIndex((prevIndex) => (prevIndex - 1 + images.length) % images.length);
   };
 
-  const handleInterestClick = () => {
+  const handleInterestClick = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const newInterestedState = !isInterested;
     setIsInterested(newInterestedState);
     setCurrentInterestedCount(current => newInterestedState ? current + 1 : current - 1);
     setCountUpdateKey(prev => prev + 1);
   };
 
-  const handleSaveClick = () => {
+  const handleSaveClick = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const newSavedState = !isSaved;
     setIsSaved(newSavedState);
     showFeedback(newSavedState ? 'Doundaa saved!' : 'Removed from saved.');
   };
 
-  const handleShareClick = async () => {
-    const activityUrl = `${window.location.href.split('?')[0]}activity/${activity.id}`;
-    const shareData = {
+  const handleShareClick = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}?activityId=${activity.id}`;
+    
+    const shareData: ShareData = {
       title: activity.title,
-      text: `Check out "${activity.title}" by ${provider.name} on Doundaa!`,
-      url: activityUrl,
+      text: `Join me for "${activity.title}" on Doundaa! Let's meet there.`,
+      url: shareUrl,
     };
 
-    if (navigator.share) {
-      try {
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
-      } catch (err) {
-        console.error('Share failed:', err);
+      } else {
+        setIsShareModalOpen(true);
       }
-    } else {
-      // Fallback for browsers that do not support the Web Share API
-      setIsShareModalOpen(true);
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        setIsShareModalOpen(true);
+      }
     }
   };
 
-  const handleFollowAction = () => {
+  const handleFollowAction = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (isFollowing) {
       if (window.confirm(`Are you sure you want to unfollow @${provider.name}?`)) {
         const newFollowingState = false;
@@ -169,22 +186,28 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
     }
   };
   
-  const handleDoundaaClick = () => {
+  const handleDoundaaClick = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (isDoundaaRequested) return;
     setIsBookingModalOpen(true);
   };
 
   const handleBookingSubmit = (details: BookingDetails) => {
-    console.log("Doundaa Inquiry Submitted:", { activityId: activity.id, ...details });
-    setIsBookingModalOpen(false);
-    setIsDoundaaRequested(true);
-    showFeedback('Doundaa request sent!');
+      setIsBookingModalOpen(false);
+      setIsDoundaaRequested(true);
+      showFeedback("Request sent to host!");
   };
 
   const handleReportSubmit = (details: ReportDetails) => {
-    console.log("Activity Reported:", { activityId: activity.id, ...details });
-    setIsReportModalOpen(false);
-    showFeedback('Report submitted. Thank you for your feedback.');
+      setIsReportModalOpen(false);
+      showFeedback("Report submitted. Thank you.");
+  };
+
+  const toggleFocus = () => {
+    setIsFocused(!isFocused);
+    if (!isFocused) {
+        setIsCaptionExpanded(true); 
+    }
   };
 
   const handleAddComment = (text: string, attachment?: { type: 'image' | 'video', url: string }, location?: Location) => {
@@ -232,62 +255,82 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
   
   const activityTags = interestIds.map(id => ALL_INTERESTS_MAP.get(id)).filter((i): i is NonNullable<typeof i> => !!i).slice(0, 3);
 
-  return (
-    <>
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6 transition-all duration-300 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl">
+  const renderCardContent = (isPopOut: boolean) => (
+    <div className={`${isPopOut ? 'bg-white h-full flex flex-col overflow-y-auto no-scrollbar' : ''}`}>
         <div className="relative group">
-          
-          <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-black bg-opacity-70 text-white text-sm px-4 py-2 rounded-full transition-all duration-300 z-20 ${feedbackMessage ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
+          <div className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 backdrop-blur-md text-white text-sm font-black px-6 py-3 rounded-2xl shadow-2xl transition-all duration-300 z-[200] ${feedbackMessage ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
             {feedbackMessage}
           </div>
 
           <div 
-            className="h-60 bg-cover bg-center transition-all duration-500 ease-in-out" 
+            onClick={!isPopOut ? toggleFocus : undefined}
+            className={`${isPopOut ? 'h-[50vh] min-h-[400px]' : 'h-64'} w-full bg-cover bg-center transition-all duration-700 ease-in-out cursor-pointer relative overflow-hidden`} 
             style={{ backgroundImage: `url(${images[currentImageIndex]})` }}
-          ></div>
+          >
+             {isPopOut && (
+                 <button 
+                    onClick={toggleFocus} 
+                    className="absolute top-12 left-6 bg-white/20 backdrop-blur-xl text-white p-3 rounded-2xl border border-white/30 shadow-2xl active:scale-90 transition-transform z-50"
+                 >
+                    <ChevronLeftIcon className="w-6 h-6" />
+                 </button>
+             )}
+             
+             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-40"></div>
+          </div>
 
           {isTimeSensitive && (
-              <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full z-10">Happening Now</span>
+              <span className="absolute top-4 left-4 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl z-10 shadow-lg animate-pulse">Happening Now</span>
           )}
 
           {images.length > 1 && (
             <>
-              <button onClick={handlePrevImage} aria-label="Previous image" className="absolute top-1/2 left-2 -translate-y-1/2 bg-white/60 hover:bg-white text-gray-800 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 focus:outline-none">
+              <button onClick={handlePrevImage} className={`absolute ${isPopOut ? 'top-1/2' : 'top-1/2'} left-4 -translate-y-1/2 bg-white/20 backdrop-blur-md hover:bg-white/40 text-white p-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-xl`}>
                 <ChevronLeftIcon className="w-6 h-6" />
               </button>
-              <button onClick={handleNextImage} aria-label="Next image" className="absolute top-1/2 right-2 -translate-y-1/2 bg-white/60 hover:bg-white text-gray-800 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 focus:outline-none">
+              <button onClick={handleNextImage} className={`absolute ${isPopOut ? 'top-1/2' : 'top-1/2'} right-4 -translate-y-1/2 bg-white/20 backdrop-blur-md hover:bg-white/40 text-white p-2.5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-xl`}>
                 <ChevronRightIcon className="w-6 h-6" />
               </button>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1.5 z-10">
+              <div className={`absolute ${isPopOut ? 'bottom-10' : 'bottom-4'} left-1/2 -translate-x-1/2 flex space-x-2 z-10`}>
                 {images.map((_, index) => (
-                  <button key={index} onClick={() => setCurrentImageIndex(index)} aria-label={`Go to image ${index + 1}`} className={`w-2 h-2 rounded-full transition-all ${index === currentImageIndex ? 'bg-white scale-125' : 'bg-white/50'}`}></button>
+                  <button key={index} onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }} className={`h-1.5 rounded-full transition-all duration-300 ${index === currentImageIndex ? 'bg-white w-6 shadow-lg' : 'bg-white/40 w-1.5'}`}></button>
                 ))}
               </div>
             </>
           )}
         </div>
 
-        <div className="p-4">
+        <div className={`p-6 ${isPopOut ? 'pb-40' : ''}`}>
           <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0 pr-4">
-                  <h2 className="text-xl font-bold text-gray-900 mt-1">{title}</h2>
-                   <div className="flex items-center flex-wrap gap-2 mt-2">
+                  <h2 onClick={!isPopOut ? toggleFocus : undefined} className={`${isPopOut ? 'text-3xl' : 'text-xl'} font-black text-gray-900 tracking-tight leading-tight cursor-pointer hover:text-teal-600 transition-colors`}>{title}</h2>
+                   <div className="flex items-center flex-wrap gap-2 mt-3">
                       {activityTags.map(tag => (
                          <InterestTag key={tag.id} interest={tag} variant="pill" isSelected={false} onClick={() => {}} />
                       ))}
                    </div>
                    {matchingInterestsCount > 0 && isAuthenticated && (
-                     <div className="mt-2 text-sm font-semibold text-teal-700 p-2 bg-teal-50 rounded-lg">
-                        ✨ {matchingInterestsCount} of your interests
-                        {matchingInterestsCount >=3 && <span className="ml-2 font-bold">💚 Great match for you!</span>}
+                     <div className="mt-4 text-[11px] font-black text-teal-700 p-3 bg-teal-50/50 rounded-2xl border border-teal-100 flex items-center space-x-2">
+                        <SparklesIcon className="w-4 h-4" />
+                        <span>Matches {matchingInterestsCount} of your hobbies!</span>
                      </div>
                    )}
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0">
-                  <img src={provider.avatarUrl} alt={provider.name} className="w-12 h-12 rounded-full border-2 border-white -mt-10 shadow-md transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-teal-400"/>
                   <div className="relative">
-                     <button onClick={() => setIsOptionsMenuOpen(prev => !prev)} aria-label="More options" className="text-gray-500 hover:text-gray-800 -mt-8">
-                        <MoreVerticalIcon className="w-5 h-5" />
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onNavigate('profile', provider); }}
+                        className="block focus:outline-none"
+                    >
+                        <img src={provider.avatarUrl} alt={provider.name} className={`w-14 h-14 rounded-[20px] border-4 border-white ${isPopOut ? '-mt-10' : '-mt-12'} shadow-2xl transition-transform duration-500 hover:scale-110 object-cover`}/>
+                    </button>
+                    <div className="absolute -bottom-1 -right-1 pointer-events-none">
+                         <VerificationBadge level={provider.verificationLevel} />
+                    </div>
+                  </div>
+                  <div className="relative">
+                     <button onClick={(e) => { e.stopPropagation(); setIsOptionsMenuOpen(prev => !prev); }} className={`text-gray-400 hover:text-gray-900 ${isPopOut ? '-mt-6' : '-mt-10'} p-2`}>
+                        <MoreVerticalIcon className="w-6 h-6" />
                      </button>
                      <OptionsMenu
                         isOpen={isOptionsMenuOpen}
@@ -300,137 +343,166 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
                   </div>
               </div>
           </div>
-          <div className="flex items-center flex-wrap text-sm text-gray-500 mt-2 gap-x-3 gap-y-1">
-              <div className="relative group">
-                  <span>by @{provider.name}</span>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30">
-                      {provider.name}
+
+          <div className="flex items-center flex-wrap text-xs font-bold text-gray-400 mt-4 gap-4">
+              <div className="flex items-center space-x-1.5">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onNavigate('profile', provider); }}
+                    className="text-gray-900 font-black hover:text-teal-600 transition-colors"
+                  >
+                    @{provider.name}
+                  </button>
+                  <div className="flex items-center bg-amber-50 text-amber-600 px-2 py-0.5 rounded-lg text-[10px] font-black">
+                      <StarIcon className="w-3 h-3 mr-1 fill-current" />
+                      {ratingDisplay}
                   </div>
               </div>
-              <VerificationBadge level={provider.verificationLevel} />
-              <div className="relative group flex items-center">
-                  <StarIcon className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="ml-1 font-semibold text-gray-700">{ratingDisplay}</span>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30">
-                      {provider.rating.toFixed(1)} stars
-                  </div>
+              
+              <div className="flex items-center space-x-2">
+                <button onClick={() => handleProtectedAction(() => handleFollowAction())} className={`px-4 py-1.5 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest ${isFollowing ? 'bg-gray-100 text-gray-500' : 'bg-teal-600 text-white shadow-lg shadow-teal-600/20'}`}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+                <button onClick={() => handleProtectedAction(() => onStartConversation(provider))} className="p-1.5 rounded-xl bg-gray-50 text-gray-500 hover:bg-teal-50 hover:text-teal-600 transition-colors border border-gray-100">
+                    <MessageCircleIcon className="w-5 h-5"/>
+                </button>
               </div>
-          </div>
-          <div className="mt-2 flex items-center space-x-2">
-            <button onClick={() => handleProtectedAction(handleFollowAction)} aria-label={isFollowing ? `Unfollow @${provider.name}` : `Follow @${provider.name}`} className={`text-xs font-semibold py-1 px-3 rounded-full transition-all duration-200 ease-in-out transform hover:scale-105 ${isFollowing ? 'bg-gray-200 text-gray-600' : 'bg-teal-500 text-white hover:bg-teal-600'}`}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </button>
-            <button onClick={() => handleProtectedAction(() => onStartConversation(provider))} aria-label={`Message @${provider.name}`} className="flex items-center text-xs font-semibold py-1 px-3 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200 ease-in-out transform hover:scale-105">
-                <MessageCircleIcon className="w-4 h-4 mr-1.5"/>
-                Message
-            </button>
           </div>
           
           {description && (
-            <div className="mt-3 text-sm text-gray-800">
-              <p className="whitespace-pre-line">
-                <span className="font-bold text-gray-900 cursor-pointer hover:underline">{provider.name}</span>{' '}
-                <span>
+            <div className={`mt-5 text-sm leading-relaxed text-gray-600 font-medium ${isPopOut ? 'text-base' : ''}`}>
+               <p className="whitespace-pre-line">
                   {isCaptionExpanded || description.length <= CAPTION_MAX_LENGTH
                     ? description
                     : `${description.substring(0, CAPTION_MAX_LENGTH)}...`}
-                  {description.length > CAPTION_MAX_LENGTH && (
-                    <button onClick={toggleCaption} className="text-gray-500 font-semibold hover:text-gray-800 ml-1">
-                      {isCaptionExpanded ? 'less' : 'more'}
+                  {!isPopOut && description.length > CAPTION_MAX_LENGTH && (
+                    <button onClick={toggleCaption} className="text-teal-600 font-black ml-1 hover:underline">
+                      Read more
                     </button>
                   )}
-                </span>
-              </p>
+               </p>
             </div>
           )}
 
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-700">
-              <div className="flex items-start">
-                  <MapPinIcon className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0 mt-0.5"/>
-                  <div className="flex-1 min-w-0">
-                    <span className="truncate font-medium">{location.name} • {distance}km</span>
-                    {location.description && <p className="text-xs text-gray-500 truncate">{location.description}</p>}
+          <div className="mt-8 grid grid-cols-2 gap-4">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsDirectionsModalOpen(true); }}
+                className="p-4 bg-gray-50 hover:bg-gray-100 active:scale-[0.98] transition-all rounded-[24px] border border-gray-100 space-y-1 text-left group"
+              >
+                  <div className="flex items-center text-gray-400 space-x-2 group-hover:text-teal-600 transition-colors">
+                      <MapPinIcon className="w-4 h-4"/>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Location</span>
                   </div>
-                   <button 
-                      onClick={() => setIsDirectionsModalOpen(true)}
-                      aria-label={`Get directions to ${location.name}`}
-                      className="ml-2 p-1 rounded-full hover:bg-gray-100 text-teal-600 flex-shrink-0"
-                  >
-                      <NavigationIcon className="w-4 h-4"/>
-                  </button>
+                  <p className="text-xs font-bold text-gray-900 truncate">{location.name}</p>
+                  <div className="text-[10px] font-black text-teal-600 uppercase flex items-center pt-1 group-hover:translate-x-1 transition-transform">
+                      Get Directions <NavigationIcon className="w-3 h-3 ml-1" />
+                  </div>
+              </button>
+
+              <div className="p-4 bg-gray-50 rounded-[24px] border border-gray-100 space-y-1">
+                  <div className="flex items-center text-gray-400 space-x-2">
+                      <CalendarIcon className="w-4 h-4"/>
+                      <span className="text-[10px] font-black uppercase tracking-widest">When</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-900 truncate">{dateTime}</p>
+                  {isRecurring && <span className="text-[9px] font-black text-blue-600 uppercase">Weekly</span>}
               </div>
-              <div className="flex items-center">
-                  <CalendarIcon className="w-4 h-4 mr-2 text-gray-400"/>
-                  <span>{dateTime}</span>
-                  {isRecurring && (
-                      <div className="relative group">
-                          <RefreshCwIcon className="w-4 h-4 ml-2 text-gray-500"/>
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max hidden group-hover:block bg-gray-800 text-white text-xs font-semibold rounded-md py-1 px-3 z-30">
-                              Recurring Doundaa
-                          </div>
-                      </div>
-                  )}
+
+              <div className="p-4 bg-gray-50 rounded-[24px] border border-gray-100 space-y-1">
+                  <div className="flex items-center text-gray-400 space-x-2">
+                      <UsersIcon className="w-4 h-4"/>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Squad</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-900">{groupSize.min}-{groupSize.max} People</p>
               </div>
-              <div className="flex items-center">
-                  <UsersIcon className="w-4 h-4 mr-2 text-gray-400"/>
-                  <span>{groupSize.min}-{groupSize.max} people</span>
-              </div>
-              <div className="flex items-center font-semibold">
-                  <span>approx. {price.amount.toLocaleString()} {price.currency}</span>
+
+              <div className="p-4 bg-gray-50 rounded-[24px] border border-gray-100 space-y-1">
+                  <div className="flex items-center text-gray-400 space-x-2">
+                      <CreditCardIcon className="w-4 h-4"/>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Price</span>
+                  </div>
+                  <p className="text-xs font-bold text-gray-900">{price.amount.toLocaleString()} {price.currency}</p>
               </div>
           </div>
           
-          <div className="mt-4 flex items-center space-x-4 text-sm text-gray-600 border-t pt-3">
-              <div className="flex items-center font-semibold">
-                  <HeartIcon className={`w-5 h-5 mr-1.5 transition-colors ${isInterested ? 'text-red-500 fill-current' : 'text-red-500'}`}/>
-                  <span key={countUpdateKey} className={`inline-block ${countUpdateKey > 0 ? 'animate-count-update' : ''}`}>{currentInterestedCount}</span>
-                  <span className="ml-1">interested</span>
+          <div className="mt-8 flex items-center justify-between border-t border-gray-50 pt-5">
+              <div className="flex -space-x-3">
+                  {[...Array(3)].map((_, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-gray-200"></div>
+                  ))}
+                  <div className="w-8 h-8 rounded-full border-2 border-white bg-teal-100 flex items-center justify-center text-[10px] font-black text-teal-700">+{currentInterestedCount}</div>
               </div>
               {matchCount > 0 && (
-                  <div className="flex items-center font-semibold text-teal-700">
-                      <UsersIcon className="w-5 h-5 mr-1.5"/>
-                      <span>{matchCount} matched</span>
+                  <div className="text-[11px] font-black text-teal-600">
+                      {matchCount} active matches waiting
                   </div>
               )}
           </div>
-        </div>
 
-        <div className="bg-gray-50 grid grid-cols-5 border-t">
-          <button onClick={() => handleProtectedAction(handleInterestClick)} aria-label={isInterested ? "Remove interest" : "Show interest"} className={`flex flex-col items-center justify-center py-3 text-xs font-bold transition-colors ${isInterested ? 'text-red-600' : 'text-gray-700 hover:bg-red-50'}`}>
-              <HeartIcon className={`w-5 h-5 mb-1 transition-all ${isInterested ? 'fill-current' : ''}`}/>
-              Interested
-          </button>
-           <button onClick={() => handleProtectedAction(() => setShowComments(!showComments))} aria-label="View comments" className="flex flex-col items-center justify-center py-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 border-l transition-colors">
-              <MessageSquareIcon className="w-5 h-5 mb-1"/>
-              {totalCommentCount > 0 ? `${totalCommentCount} Comments` : 'Comment'}
-          </button>
-          <button onClick={() => handleProtectedAction(handleSaveClick)} aria-label={isSaved ? 'Remove from saved' : 'Save this doundaa'} className="flex flex-col items-center justify-center py-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 border-l transition-colors">
-              <BookmarkIcon className={`w-5 h-5 mb-1 transition-all ${isSaved ? 'text-teal-600 fill-current' : 'text-gray-600'}`}/>
-              {isSaved ? 'Saved' : 'Save'}
-          </button>
-          <button onClick={handleShareClick} aria-label="Share this doundaa" className="flex flex-col items-center justify-center py-3 text-xs font-semibold text-gray-700 hover:bg-gray-100 border-l transition-colors">
-              <ShareIcon className="w-5 h-5 mb-1"/>
-              Share
-          </button>
-          <button
-              onClick={() => handleProtectedAction(handleDoundaaClick)}
-              aria-label={isDoundaaRequested ? 'Doundaa request sent' : 'Doundaa this activity'}
-              disabled={isDoundaaRequested}
-              className={`flex flex-col items-center justify-center py-3 text-xs font-bold transition-colors border-l ${isDoundaaRequested ? 'text-gray-500 bg-gray-100 cursor-not-allowed' : 'text-teal-600 hover:bg-teal-50'}`}
-          >
-              <CreditCardIcon className="w-5 h-5 mb-1"/>
-              {isDoundaaRequested ? 'Requested' : 'Doundaa'}
-          </button>
-        </div>
+          <div className={`mt-8 grid grid-cols-4 gap-3 ${isPopOut ? 'mb-12' : ''}`}>
+             <button onClick={() => handleProtectedAction(() => handleInterestClick())} className={`flex flex-col items-center justify-center p-4 rounded-3xl border transition-all ${isInterested ? 'bg-red-50 border-red-100 text-red-600 shadow-xl shadow-red-500/10' : 'bg-gray-50 border-gray-100 text-gray-400 hover:bg-gray-100'}`}>
+                <HeartIcon className={`w-6 h-6 mb-1 ${isInterested ? 'fill-current' : ''}`} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Vibe</span>
+             </button>
+             <button onClick={() => handleProtectedAction(() => handleSaveClick())} className={`flex flex-col items-center justify-center p-4 rounded-3xl border transition-all ${isSaved ? 'bg-amber-50 border-amber-100 text-amber-600 shadow-xl shadow-amber-500/10' : 'bg-gray-50 border-gray-100 text-gray-400 hover:bg-gray-100'}`}>
+                <BookmarkIcon className={`w-6 h-6 mb-1 ${isSaved ? 'fill-current' : ''}`} />
+                <span className="text-[9px] font-black uppercase tracking-widest">Save</span>
+             </button>
+             <button onClick={() => handleProtectedAction(() => handleShareClick())} className="flex flex-col items-center justify-center p-4 rounded-3xl bg-gray-50 border border-gray-100 text-gray-400 hover:bg-gray-100 transition-all">
+                <ShareIcon className="w-6 h-6 mb-1" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Share</span>
+             </button>
+             <button onClick={() => handleProtectedAction(() => handleDoundaaClick())} className="flex flex-col items-center justify-center p-4 rounded-3xl bg-teal-600 border border-teal-500 text-white shadow-xl shadow-teal-600/30 hover:bg-teal-700 active:scale-95 transition-all">
+                <CreditCardIcon className="w-6 h-6 mb-1" />
+                <span className="text-[9px] font-black uppercase tracking-widest">Doundaa</span>
+             </button>
+          </div>
 
-        {showComments && (
-          <CommentSection 
-              comments={comments}
-              onAddComment={handleAddComment}
-              onAddReply={handleAddReply}
-          />
-        )}
+          {(showComments || isPopOut) && (
+            <div className="mt-12 space-y-6">
+                <div className="flex items-center justify-between">
+                    <h3 className="font-black text-xl text-gray-900 tracking-tight">Activity Buzz</h3>
+                    <span className="text-xs font-bold text-gray-400">{totalCommentCount} comments</span>
+                </div>
+                <div className="bg-gray-50 rounded-[32px] overflow-hidden border border-gray-100 shadow-inner">
+                    <CommentSection 
+                        comments={comments}
+                        onAddComment={handleAddComment}
+                        onAddReply={handleAddReply}
+                        onNavigate={onNavigate}
+                    />
+                </div>
+            </div>
+          )}
+        </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="bg-white rounded-[40px] shadow-2xl overflow-hidden mb-10 transition-all duration-500 group border border-gray-100 hover:shadow-teal-900/5">
+        {renderCardContent(false)}
       </div>
+
+      {isFocused && (
+          <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex flex-col items-center justify-end sm:justify-center p-0 sm:p-6 animate-fade-in-up">
+            <div className="w-full max-w-md h-[92vh] sm:h-5/6 bg-white rounded-t-[48px] sm:rounded-[48px] overflow-hidden shadow-2xl relative">
+                   {renderCardContent(true)}
+                   {/* High-fidelity sticky footer for the primary action */}
+                   <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-md border-t border-gray-50 flex items-center justify-center p-safe-bottom z-50">
+                      <button 
+                        onClick={() => handleProtectedAction(() => handleDoundaaClick())}
+                        className="w-full bg-[#111827] text-white font-black py-5 px-6 rounded-[24px] text-lg shadow-[0_15px_30px_rgba(0,0,0,0.2)] active:scale-95 transition-all hover:bg-black group flex items-center justify-center space-x-3"
+                      >
+                         <span>{isDoundaaRequested ? 'Request Sent ✓' : 'Let\'s Meet There'}</span>
+                         {!isDoundaaRequested && <ChevronRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                      </button>
+                   </div>
+            </div>
+            {/* Click backdrop to close */}
+            <div className="absolute inset-0 -z-10" onClick={toggleFocus}></div>
+          </div>
+      )}
+
       <BookingForm
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
@@ -445,7 +517,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
         onClose={() => setIsShareModalOpen(false)}
         title={activity.title}
         text={`Check out "${activity.title}" by ${provider.name} on Doundaa!`}
-        url={`${window.location.href.split('?')[0]}activity/${activity.id}`}
+        url={`${window.location.origin}${window.location.pathname}?activityId=${activity.id}`}
         friends={mockFriends}
       />
       <ReportModal
@@ -458,6 +530,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, onFollowToggle, o
         isOpen={isDirectionsModalOpen}
         onClose={() => setIsDirectionsModalOpen(false)}
         locationName={location.name}
+        customUrl={location.googleMapsUrl}
       />
     </>
   );

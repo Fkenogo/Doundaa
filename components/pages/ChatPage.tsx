@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Conversation, Message, User, Location } from '../../types';
+import { Conversation, Message, User, Location, Page, Provider } from '../../types';
 import { currentUser } from '../../constants';
 import { ChevronLeftIcon, SendIcon, CheckIcon, CheckCheckIcon, MapPinIcon } from '../icons';
 import LocationPickerModal from '../LocationPickerModal';
+import DirectionsChooserModal from '../DirectionsChooserModal';
 
 const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -26,7 +28,7 @@ const ConversationListItem: React.FC<{
     return (
         <button onClick={onClick} className={`w-full text-left p-3 flex items-center space-x-3 transition-colors ${isSelected ? 'bg-teal-50' : 'hover:bg-gray-100'}`}>
             <div className="relative">
-                <img src={otherUser.avatarUrl} alt={otherUser.name} className="w-12 h-12 rounded-full" />
+                <img src={otherUser.avatarUrl} alt={otherUser.name} className="w-12 h-12 rounded-full object-cover" />
                 {conversation.unreadCount > 0 && 
                     <span className="absolute top-0 right-0 block h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
                 }
@@ -42,27 +44,34 @@ const ConversationListItem: React.FC<{
     );
 };
 
-const LocationBubble: React.FC<{ location: Location }> = ({ location }) => (
-    <div className="p-3 bg-white border border-gray-200 rounded-lg">
-        <div className="flex items-start space-x-3">
-            <div className="bg-gray-100 p-2 rounded-lg">
-                <MapPinIcon className="w-6 h-6 text-gray-500" />
+const LocationBubble: React.FC<{ location: Location }> = ({ location }) => {
+    const [isDirectionsOpen, setIsDirectionsOpen] = React.useState(false);
+
+    return (
+        <div className="p-3 bg-white border border-gray-200 rounded-lg">
+            <div className="flex items-start space-x-3">
+                <div className="bg-gray-100 p-2 rounded-lg">
+                    <MapPinIcon className="w-6 h-6 text-gray-500" />
+                </div>
+                <div>
+                    <p className="font-semibold text-gray-800">{location.name}</p>
+                    <p className="text-xs text-gray-500">Shared Location</p>
+                </div>
             </div>
-            <div>
-                <p className="font-semibold text-gray-800">{location.name}</p>
-                <p className="text-xs text-gray-500">Shared Location</p>
-            </div>
+            <button 
+                onClick={() => setIsDirectionsOpen(true)}
+                className="block mt-3 text-center w-full bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-200 transition-all text-sm active:scale-95"
+            >
+                Get Directions
+            </button>
+            <DirectionsChooserModal 
+                isOpen={isDirectionsOpen}
+                onClose={() => setIsDirectionsOpen(false)}
+                locationName={location.name}
+            />
         </div>
-        <a 
-            href={location.mapUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block mt-3 text-center w-full bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-        >
-            Get Directions
-        </a>
-    </div>
-);
+    );
+};
 
 
 const MessageBubble: React.FC<{ message: Message; isMe: boolean }> = ({ message, isMe }) => {
@@ -94,10 +103,11 @@ interface ChatPageProps {
     conversations: Conversation[];
     onSendMessage: (conversationId: string, message: Message) => void;
     onMarkAsRead: (conversationId: string) => void;
+    onNavigate: (page: Page, profileUser?: User | Provider) => void;
     initialConversationId?: string;
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({ conversations, onSendMessage, onMarkAsRead, initialConversationId }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ conversations, onSendMessage, onMarkAsRead, onNavigate, initialConversationId }) => {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [messageText, setMessageText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -197,11 +207,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ conversations, onSendMessage, onMar
                         <button onClick={() => setActiveConversationId(null)} className="md:hidden text-gray-600">
                             <ChevronLeftIcon className="w-6 h-6" />
                         </button>
-                        <img src={otherUser.avatarUrl} alt={otherUser.name} className="w-10 h-10 rounded-full" />
-                        <div>
-                            <p className="font-bold text-gray-800">{otherUser.name}</p>
-                            <p className="text-xs text-gray-500">Online</p>
-                        </div>
+                        <button 
+                            onClick={() => onNavigate('profile', otherUser)}
+                            className="flex items-center space-x-3 text-left focus:outline-none"
+                        >
+                            <img src={otherUser.avatarUrl} alt={otherUser.name} className="w-10 h-10 rounded-full object-cover" />
+                            <div>
+                                <p className="font-bold text-gray-800 hover:text-teal-600 transition-colors">{otherUser.name}</p>
+                                <p className="text-xs text-gray-500">Online</p>
+                            </div>
+                        </button>
                     </header>
                     <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-100">
                         {activeConversation.messages.map(msg => (

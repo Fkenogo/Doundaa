@@ -1,7 +1,9 @@
+
 import React, { useState, useRef } from 'react';
-import { Comment, User, Location } from '../types';
+import { Comment, User, Location, Page, Provider } from '../types';
 import { PaperclipIcon, MapPinIcon } from './icons';
 import LocationPickerModal from './LocationPickerModal';
+import DirectionsChooserModal from './DirectionsChooserModal';
 
 type Attachment = {
     type: 'image' | 'video';
@@ -11,31 +13,40 @@ type Attachment = {
 interface CommentProps {
     comment: Comment;
     onAddReply: (text: string, parentId: string, attachment?: Attachment, location?: Location) => void;
+    onNavigate: (page: Page, profileUser?: User | Provider) => void;
 }
 
-const LocationCard: React.FC<{location: Location}> = ({ location }) => (
-    <div className="mt-2 p-2.5 bg-white border border-gray-200 rounded-lg">
-        <div className="flex items-start space-x-2.5">
-            <div className="bg-gray-100 p-2 rounded-lg">
-                <MapPinIcon className="w-5 h-5 text-gray-500" />
+const LocationCard: React.FC<{location: Location}> = ({ location }) => {
+    const [isDirectionsOpen, setIsDirectionsOpen] = React.useState(false);
+    
+    return (
+        <div className="mt-2 p-2.5 bg-white border border-gray-200 rounded-lg">
+            <div className="flex items-start space-x-2.5">
+                <div className="bg-gray-100 p-2 rounded-lg">
+                    <MapPinIcon className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-800 truncate">{location.name}</p>
+                    <button 
+                        onClick={() => setIsDirectionsOpen(true)}
+                        className="text-xs font-bold text-teal-600 hover:underline"
+                    >
+                        Get Directions
+                    </button>
+                </div>
             </div>
-            <div>
-                <p className="font-semibold text-sm text-gray-800">{location.name}</p>
-                <a 
-                    href={location.mapUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-xs font-bold text-teal-600 hover:underline"
-                >
-                    Get Directions
-                </a>
-            </div>
+            <DirectionsChooserModal 
+                isOpen={isDirectionsOpen}
+                onClose={() => setIsDirectionsOpen(false)}
+                locationName={location.name}
+                customUrl={location.googleMapsUrl}
+            />
         </div>
-    </div>
-);
+    );
+};
 
 
-const CommentItem: React.FC<CommentProps> = ({ comment, onAddReply }) => {
+const CommentItem: React.FC<CommentProps> = ({ comment, onAddReply, onNavigate }) => {
     const [showReplyInput, setShowReplyInput] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [attachment, setAttachment] = useState<Attachment | undefined>(undefined);
@@ -70,21 +81,31 @@ const CommentItem: React.FC<CommentProps> = ({ comment, onAddReply }) => {
 
     return (
         <div className="flex items-start space-x-3">
-            <img src={comment.user.avatarUrl} alt={comment.user.name} className="w-8 h-8 rounded-full mt-1" />
-            <div className="flex-1">
+            <button 
+                onClick={() => onNavigate('profile', comment.user)}
+                className="flex-shrink-0"
+            >
+                <img src={comment.user.avatarUrl} alt={comment.user.name} className="w-8 h-8 rounded-full mt-1 object-cover" />
+            </button>
+            <div className="flex-1 min-w-0">
                 <div className="bg-gray-100 rounded-lg px-3 py-2">
                     <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-sm text-gray-800">{comment.user.name}</span>
+                        <button 
+                            onClick={() => onNavigate('profile', comment.user)}
+                            className="font-black text-sm text-gray-800 hover:text-teal-600 transition-colors"
+                        >
+                            {comment.user.name}
+                        </button>
                         <span className="text-xs text-gray-500">{comment.timestamp}</span>
                     </div>
-                    {comment.text && <p className="text-sm text-gray-700">{comment.text}</p>}
+                    {comment.text && <p className="text-sm text-gray-700 leading-snug">{comment.text}</p>}
                     {comment.location && <LocationCard location={comment.location} />}
                     {comment.attachment && (
                         <div className="mt-2">
                             {comment.attachment.type === 'image' ? (
-                                <img src={comment.attachment.url} alt="comment attachment" className="max-h-48 rounded-lg" />
+                                <img src={comment.attachment.url} alt="comment attachment" className="max-h-48 rounded-lg w-full object-cover" />
                             ) : (
-                                <video src={comment.attachment.url} controls className="max-h-48 rounded-lg" />
+                                <video src={comment.attachment.url} controls className="max-h-48 rounded-lg w-full" />
                             )}
                         </div>
                     )}
@@ -136,21 +157,31 @@ const CommentItem: React.FC<CommentProps> = ({ comment, onAddReply }) => {
                     <div className="mt-2 space-y-2">
                         {comment.replies.map(reply => (
                            <div key={reply.id} className="flex items-start space-x-3">
-                                <img src={reply.user.avatarUrl} alt={reply.user.name} className="w-8 h-8 rounded-full mt-1" />
-                                <div className="flex-1">
+                                <button 
+                                    onClick={() => onNavigate('profile', reply.user)}
+                                    className="flex-shrink-0"
+                                >
+                                    <img src={reply.user.avatarUrl} alt={reply.user.name} className="w-8 h-8 rounded-full mt-1 object-cover" />
+                                </button>
+                                <div className="flex-1 min-w-0">
                                     <div className="bg-gray-100 rounded-lg px-3 py-2">
                                         <div className="flex items-center space-x-2">
-                                            <span className="font-semibold text-sm text-gray-800">{reply.user.name}</span>
+                                            <button 
+                                                onClick={() => onNavigate('profile', reply.user)}
+                                                className="font-black text-sm text-gray-800 hover:text-teal-600 transition-colors"
+                                            >
+                                                {reply.user.name}
+                                            </button>
                                             <span className="text-xs text-gray-500">{reply.timestamp}</span>
                                         </div>
-                                        {reply.text && <p className="text-sm text-gray-700">{reply.text}</p>}
+                                        {reply.text && <p className="text-sm text-gray-700 leading-snug">{reply.text}</p>}
                                         {reply.location && <LocationCard location={reply.location} />}
                                         {reply.attachment && (
                                             <div className="mt-2">
                                                 {reply.attachment.type === 'image' ? (
-                                                    <img src={reply.attachment.url} alt="reply attachment" className="max-h-40 rounded-lg" />
+                                                    <img src={reply.attachment.url} alt="reply attachment" className="max-h-40 rounded-lg w-full object-cover" />
                                                 ) : (
-                                                    <video src={reply.attachment.url} controls className="max-h-40 rounded-lg" />
+                                                    <video src={reply.attachment.url} controls className="max-h-40 rounded-lg w-full" />
                                                 )}
                                             </div>
                                         )}
@@ -170,9 +201,10 @@ interface CommentSectionProps {
   comments: Comment[];
   onAddComment: (text: string, attachment?: Attachment, location?: Location) => void;
   onAddReply: (text: string, parentId: string, attachment?: Attachment, location?: Location) => void;
+  onNavigate: (page: Page, profileUser?: User | Provider) => void;
 }
 
-const CommentSection: React.FC<CommentSectionProps> = ({ comments, onAddComment, onAddReply }) => {
+const CommentSection: React.FC<CommentSectionProps> = ({ comments, onAddComment, onAddReply, onNavigate }) => {
   const [newComment, setNewComment] = useState('');
   const [attachment, setAttachment] = useState<Attachment | undefined>(undefined);
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
@@ -207,7 +239,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ comments, onAddComment,
     <div className="bg-white p-4 border-t">
       <div className="space-y-4">
         {comments.map(comment => (
-          <CommentItem key={comment.id} comment={comment} onAddReply={onAddReply} />
+          <CommentItem key={comment.id} comment={comment} onAddReply={onAddReply} onNavigate={onNavigate} />
         ))}
       </div>
       <div className="mt-4">

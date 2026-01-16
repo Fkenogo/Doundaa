@@ -1,53 +1,66 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0d9488">
     <title>Doundaa: Let's Meet There.</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+      }
       body {
         font-family: 'Inter', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: contain;
+        background-color: #f8fafc;
+        margin: 0;
+        padding: 0;
       }
-      @keyframes count-update-animation {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
       }
-      .animate-count-update {
-        animation: count-update-animation 0.3s ease-in-out;
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
       @keyframes fade-in-up {
-          0% {
-              opacity: 0;
-              transform: scale(0.95) translateY(10px);
-          }
-          100% {
-              opacity: 1;
-              transform: scale(1) translateY(0);
-          }
+          0% { opacity: 0; transform: translateY(10px); }
+          100% { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in-up {
           animation: fade-in-up 0.3s forwards cubic-bezier(0.25, 0.46, 0.45, 0.94);
       }
+      @keyframes float {
+          0%, 100% { transform: translateY(-24px); }
+          50% { transform: translateY(-34px); }
+      }
+      .animate-float {
+          animation: float 3s ease-in-out infinite;
+      }
     </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "react": "https://aistudiocdn.com/react@^19.2.1",
     "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "recharts": "https://aistudiocdn.com/recharts@^2.12.7/"
+    "recharts": "https://aistudiocdn.com/recharts@^2.12.7/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
   }
 }
 </script>
-</head>
-  <body>
+  </head>
+  <body class="overflow-hidden">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
