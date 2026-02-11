@@ -13,14 +13,21 @@ interface NavItemProps {
 }
 
 const NavItem: React.FC<NavItemProps> = ({ icon, label, page, activePage, navigate, hasNotification }) => (
-  <button onClick={() => navigate(page)} className={`relative flex flex-col items-center justify-center w-full pt-2 pb-1 space-y-1 ${activePage === page ? 'text-teal-600' : 'text-gray-500'} hover:text-teal-600 transition-colors`}>
+  <button 
+    onClick={() => navigate(page)} 
+    className={`relative flex flex-col items-center justify-center w-full min-h-[56px] py-1 transition-all active:scale-90 ${activePage === page ? 'text-teal-500' : 'text-slate-500'} hover:text-teal-500`}
+  >
     {hasNotification && (
-        <span className="absolute top-1 right-1/2 translate-x-3 flex h-2.5 w-2.5">
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+        <span className="absolute top-2 right-1/2 translate-x-3 flex h-2.5 w-2.5">
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-slate-950"></span>
         </span>
     )}
-    {icon}
-    <span className="text-xs font-medium">{label}</span>
+    <div className={`${activePage === page ? 'scale-110' : ''} transition-transform`}>
+        {icon}
+    </div>
+    <span className={`text-[9px] font-black uppercase tracking-wider mt-1 ${activePage === page ? 'opacity-100' : 'opacity-60'}`}>
+        {label}
+    </span>
   </button>
 );
 
@@ -42,22 +49,25 @@ const BottomNav: React.FC<BottomNavProps> = ({ activePage, navigate, hasUnreadMe
     };
   
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-gray-200 z-50">
-      <div className="max-w-md mx-auto px-2">
-        <nav className="flex items-center justify-around h-16">
+    <footer className="sticky bottom-0 left-0 right-0 bg-slate-950 border-t border-white/5 z-[100] pb-safe-bottom shadow-[0_-10px_40px_rgba(0,0,0,0.5)] shrink-0 overflow-visible">
+      <div className="w-full px-2 overflow-visible">
+        <nav className="flex items-center justify-around h-16 overflow-visible">
           <NavItem icon={<CompassIcon className="w-6 h-6" />} label="Discover" page="discover" activePage={activePage} navigate={navigate} />
           <NavItem icon={<UsersIcon className="w-6 h-6" />} label="Matches" page="matches" activePage={activePage} navigate={navigate} />
           
-          <button 
-            onClick={handleCreatePostClick} 
-            className="text-teal-600 hover:text-teal-700 bg-white rounded-full p-1 shadow-lg border-2 border-teal-50 animate-float transition-all active:scale-90"
-            aria-label="Create Post"
-          >
-            <PlusCircleIcon className="w-12 h-12" />
-          </button>
+          <div className="flex flex-col items-center justify-end h-full w-full relative pb-1">
+            <button 
+                onClick={handleCreatePostClick} 
+                className="absolute -top-7 left-1/2 -translate-x-1/2 text-white bg-teal-600 rounded-2xl p-3.5 shadow-2xl shadow-teal-900/40 transition-all active:scale-90 border-4 border-slate-950 z-[110]"
+                aria-label="Create Post"
+            >
+                <PlusCircleIcon className="w-7 h-7" />
+            </button>
+            <span className="text-[9px] font-black uppercase tracking-[2px] text-slate-600 mb-1">Doundaa</span>
+          </div>
 
-          <NavItem icon={<MessageCircleIcon className="w-6 h-6" />} label="Messages" page="messages" activePage={activePage} navigate={navigate} hasNotification={hasUnreadMessages} />
-          <NavItem icon={<HeartIcon className="w-6 h-6" />} label="Interests" page="interests" activePage={activePage} navigate={navigate} />
+          <NavItem icon={<MessageCircleIcon className="w-6 h-6" />} label="Chat" page="messages" activePage={activePage} navigate={navigate} hasNotification={hasUnreadMessages} />
+          <NavItem icon={<HeartIcon className="w-6 h-6" />} label="Vibe" page="interests" activePage={activePage} navigate={navigate} />
         </nav>
       </div>
     </footer>

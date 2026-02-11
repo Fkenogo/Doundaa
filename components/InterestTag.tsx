@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Interest, MAIN_CATEGORIES } from '../interests';
 import { CheckCircleIcon } from './icons';
@@ -12,117 +13,55 @@ interface InterestTagProps {
 const InterestTag: React.FC<InterestTagProps> = ({ interest, variant, isSelected, onClick }) => {
     const [isHovered, setIsHovered] = useState(false);
     const category = MAIN_CATEGORIES.find(c => c.id === interest.category);
-    const colors = category?.colors || { primary: '#00B8FF', light: '#E6F7FF', dark: '#005B7F' };
+    const colors = category?.colors || { primary: '#0d9488', light: '#f0fdfa', dark: '#0f172a' };
 
     const handleClick = () => onClick(interest.id);
-    const ariaLabel = `${interest.name} - ${category?.name || 'General'} category - ${isSelected ? 'Currently selected' : 'Currently not selected'}`;
 
     if (variant === 'pill') {
-        const baseStyle: React.CSSProperties = {
-            height: '42px',
-            padding: '8px 18px',
-            borderRadius: '16px',
-            fontSize: '14px',
-            fontWeight: 700,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            border: '2px solid transparent',
-        };
-
-        const unselectedStyle: React.CSSProperties = { 
-            background: '#F9FAFB', 
-            borderColor: '#F3F4F6', 
-            color: '#4B5563' 
-        };
-        const selectedStyle: React.CSSProperties = { 
-            background: colors.primary, 
-            color: 'white',
-            boxShadow: `0 10px 15px -3px ${colors.primary}33`
-        };
-        const hoverStyle: React.CSSProperties = { 
-            background: colors.light, 
-            borderColor: colors.primary, 
-            transform: 'translateY(-2px)' 
-        };
-
-        const style = isSelected ? selectedStyle : (isHovered ? hoverStyle : unselectedStyle);
-        const iconStyle: React.CSSProperties = { 
-            fontSize: '18px',
-            filter: isSelected ? 'none' : 'grayscale(100%) brightness(1.2)'
-        };
-
         return (
             <button
                 onClick={handleClick}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                role="checkbox"
-                aria-checked={isSelected}
-                aria-label={ariaLabel}
-                style={{ ...baseStyle, ...style }}
-                className="focus:outline-none focus:ring-4 focus:ring-teal-500/20 active:scale-95 transition-all"
+                className={`
+                    inline-flex items-center gap-2 px-5 py-2.5 rounded-[18px] text-xs font-black uppercase tracking-wider transition-all duration-300 border-2 active:scale-90
+                    ${isSelected 
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-xl shadow-slate-900/10' 
+                        : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300 shadow-sm'
+                    }
+                `}
+                style={isSelected ? { backgroundColor: colors.primary, borderColor: colors.primary } : {}}
             >
-                <span style={iconStyle} aria-hidden="true">{interest.emoji}</span>
-                <span className="tracking-tight">{interest.name}</span>
+                <span className={`text-base ${isSelected ? '' : 'grayscale opacity-70'}`}>{interest.emoji}</span>
+                <span>{interest.name}</span>
             </button>
         );
     }
     
     if (variant === 'card') {
-         const baseStyle: React.CSSProperties = {
-            width: '100%',
-            aspectRatio: '1/1',
-            borderRadius: '28px',
-            padding: '24px',
-            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        };
-
-        const unselectedStyle: React.CSSProperties = { 
-            background: '#F9FAFB', 
-            border: '2px solid #F3F4F6' 
-        };
-        const selectedStyle: React.CSSProperties = { 
-            background: 'white', 
-            border: `3px solid ${colors.primary}`,
-            boxShadow: `0 20px 30px -10px ${colors.primary}33`,
-            transform: 'scale(1.02)'
-        };
-        
-        const currentStyle = isSelected ? selectedStyle : unselectedStyle;
-        const iconStyle: React.CSSProperties = { 
-            fontSize: '48px', 
-            filter: isSelected ? 'drop-shadow(0 10px 8px rgba(0,0,0,0.1))' : 'grayscale(30%)' 
-        };
-        const textStyle: React.CSSProperties = { 
-            fontSize: '13px', 
-            fontWeight: 800,
-            color: isSelected ? '#111827' : '#6B7280',
-            marginTop: '12px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.8px'
-        };
-
         return (
             <button
                 onClick={handleClick}
-                role="checkbox"
-                aria-checked={isSelected}
-                aria-label={ariaLabel}
-                style={{...baseStyle, ...currentStyle}}
-                className={`relative text-center flex flex-col items-center justify-center space-y-1 transform active:scale-90 focus:outline-none group`}
+                className={`
+                    relative aspect-square w-full rounded-[32px] p-6 flex flex-col items-center justify-center space-y-3 transition-all duration-500 border-2 active:scale-95
+                    ${isSelected 
+                        ? 'bg-white border-teal-500 shadow-[0_20px_40px_rgba(13,148,136,0.15)] ring-4 ring-teal-500/5' 
+                        : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 shadow-sm'
+                    }
+                `}
+                style={isSelected ? { borderColor: colors.primary, ringColor: `${colors.primary}10` } : {}}
             >
                  {isSelected && (
                     <div className="absolute top-4 right-4 bg-teal-600 rounded-full p-1 shadow-lg animate-fade-in-up">
                          <CheckCircleIcon className="w-5 h-5 text-white" />
                     </div>
                  )}
-                 <span style={iconStyle} aria-hidden="true" className="group-hover:scale-110 transition-transform duration-300">
+                 <span className={`text-5xl transition-transform duration-500 ${isSelected ? 'scale-110 drop-shadow-xl' : 'grayscale opacity-60'}`}>
                     {interest.emoji}
                  </span>
-                 <p style={textStyle} className="leading-tight">{interest.name}</p>
+                 <p className={`text-[11px] font-black uppercase tracking-widest leading-tight ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>
+                    {interest.name}
+                 </p>
             </button>
         );
     }

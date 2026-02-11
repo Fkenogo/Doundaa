@@ -88,7 +88,9 @@ const App: React.FC = () => {
         setViewingProfileUser(null);
     }
     setCurrentPage(page);
-    window.scrollTo(0, 0);
+    // Scroll handling for mobile viewport
+    const mainEl = document.getElementById('main-scroll-container');
+    if (mainEl) mainEl.scrollTo(0, 0);
   };
 
   // --- RENDER LOGIC ---
@@ -150,9 +152,11 @@ const App: React.FC = () => {
     }
   };
 
+  const isFullScreenPage = currentPage === 'admin' || currentPage === 'auth' || currentPage === 'onboarding';
+
   return (
-    <div className="max-w-md mx-auto h-[100dvh] flex flex-col bg-white shadow-2xl relative overflow-hidden">
-      {currentPage !== 'admin' && (
+    <div className="flex flex-col w-full h-full bg-[#020617] relative overflow-hidden max-w-7xl mx-auto shadow-2xl">
+      {!isFullScreenPage && (
         <Header 
           onLogoClick={() => navigate('discover')} 
           onProfileClick={() => navigate('profile')}
@@ -161,11 +165,16 @@ const App: React.FC = () => {
         />
       )}
       
-      <main className={`flex-1 overflow-y-auto no-scrollbar ${currentPage !== 'admin' ? 'pt-16 pb-20' : ''}`}>
-        {renderContent()}
+      <main 
+        id="main-scroll-container"
+        className="flex-1 overflow-y-auto no-scrollbar relative"
+      >
+        <div className="animate-fade-in-up min-h-full">
+          {renderContent()}
+        </div>
       </main>
 
-      {currentPage !== 'admin' && (
+      {!isFullScreenPage && (
         <BottomNav 
           activePage={currentPage} 
           navigate={navigate} 

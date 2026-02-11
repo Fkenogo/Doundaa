@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface FilterBarProps {
@@ -8,10 +9,10 @@ interface FilterBarProps {
 const FilterButton: React.FC<{ label: string; isActive: boolean; onClick: () => void; }> = ({ label, isActive, onClick }) => (
     <button
         onClick={onClick}
-        className={`px-4 py-2 text-sm font-semibold rounded-full whitespace-nowrap transition-colors duration-200 ${
+        className={`px-5 py-2.5 text-xs font-black uppercase tracking-widest rounded-2xl whitespace-nowrap transition-all duration-300 active:scale-95 ${
         isActive
-            ? 'bg-teal-600 text-white shadow'
-            : 'bg-white text-gray-600 hover:bg-gray-100'
+            ? 'bg-teal-600 text-white shadow-xl shadow-teal-600/20'
+            : 'bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800'
         }`}
     >
         {label}
@@ -23,10 +24,10 @@ const FilterBar: React.FC<FilterBarProps> = ({ activeTab, setActiveTab }) => {
   const tabs = ['For You', 'Nearby', 'Trending', 'Doundaa-ing Now', 'Following'];
 
   return (
-    <div className="sticky top-16 bg-gray-50/90 backdrop-blur-sm z-40">
-      <div className="p-4">
-        <div className="overflow-x-auto">
-          <div className="flex items-center space-x-3">
+    <div className="sticky top-0 bg-slate-950/90 backdrop-blur-md z-40 border-b border-white/5">
+      <div className="py-4 overflow-hidden">
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex items-center space-x-3 px-5">
             {tabs.map(tab => (
               <FilterButton 
                 key={tab}
